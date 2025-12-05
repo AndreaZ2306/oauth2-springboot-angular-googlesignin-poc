@@ -1,14 +1,24 @@
 import { TestBed } from '@angular/core/testing';
-import { HttpInterceptorFn } from '@angular/common/http';
+import { ResourceInterceptor } from './resource.interceptor';
+import { TokenService } from '../services/token.service';
 
-import { resourceInterceptor } from './resource.interceptor';
-
-describe('resourceInterceptor', () => {
-  const interceptor: HttpInterceptorFn = (req, next) => 
-    TestBed.runInInjectionContext(() => resourceInterceptor(req, next));
+describe('ResourceInterceptor', () => {
+  let interceptor: ResourceInterceptor;
 
   beforeEach(() => {
-    TestBed.configureTestingModule({});
+    TestBed.configureTestingModule({
+      providers: [
+        ResourceInterceptor,
+        {
+          provide: TokenService,
+          useValue: {
+            getAccessToken: () => null, // stub sencillo para el test
+          },
+        },
+      ],
+    });
+
+    interceptor = TestBed.inject(ResourceInterceptor);
   });
 
   it('should be created', () => {
