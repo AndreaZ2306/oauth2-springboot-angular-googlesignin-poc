@@ -5,6 +5,11 @@ pipeline {
         timestamps()
     }
 
+    environment {
+        // Evita problemas típicos de Maven en CI
+        MAVEN_OPTS = "-Dmaven.repo.local=.m2/repository"
+    }
+
     stages {
 
         stage('Checkout') {
@@ -14,35 +19,41 @@ pipeline {
             }
         }
 
-        stage('Build Backend (resource-server)') {
+        stage('Build + Tests Backend (resource-server)') {
             steps {
-                echo 'Compilando backend con Maven en resource-server'
+                echo 'Build + tests del backend con Maven (resource-server)'
+
                 dir('resource-server') {
-                    // Por si el proyecto tuviera Maven Wrapper (mvnw)
+
+                    // Asegura permisos del wrapper si existe
                     sh 'chmod +x mvnw || true'
 
-                    // Si existe mvnw lo usa; si no, usa mvn del sistema
+                    // Build real + tests (incluye generación de reportes)
                     sh '''
+                        set -e
                         if [ -f "./mvnw" ]; then
-                          ./mvnw -B clean compile
+                          ./mvnw -B clean test package
                         else
-                          mvn -B clean compile
+                          mvn -B clean test package
                         fi
                     '''
                 }
             }
         }
 
-        stage('Tests Backend (resource-server)') {
+        // ---- OPCIONAL: FRONTEND (si existe carpeta y package.json) ----
+        stage('Build Frontend (opcional)') {
+            when {
+                expression { fileExists('front/package.json') }
+            }
             steps {
-                echo 'Ejecutando tests del backend (resource-server)'
-                dir('resource-server') {
+                echo 'Build frontend Angular (opcional)'
+
+                dir('front') {
                     sh '''
-                        if [ -f "./mvnw" ]; then
-                          ./mvnw -B test
-                        else
-                          mvn -B test
-                        fi
+                        set -e
+                        npm ci
+                        npm run build
                     '''
                 }
             }
@@ -60,15 +71,13 @@ pipeline {
         always {
             echo 'Pipeline finalizado'
 
-            // Guardar resultados de tests (si existen)
-            dir('resource-server') {
-                junit allowEmptyResults: true, testResults: 'target/surefire-reports/*.xml'
-            }
+            // 1) Publicar resultados de tests JUnit (backend)
+            junit allowEmptyResults: true, testResults: 'resource-server/target/surefire-reports/*.xml'
 
-            // Guardar artefacto .jar si se generó en algún paso (por si luego cambias a package)
+            // 2) Guardar el .jar del backend si se generó
             archiveArtifacts artifacts: 'resource-server/target/*.jar', allowEmptyArchive: true
 
-            // Guardar reportes de JaCoCo si se generaron
+            // 3) Guardar reportes JaCoCo si existen (los genera tu pom con jacoco-maven-plugin)
             archiveArtifacts artifacts: 'resource-server/target/site/jacoco/**', allowEmptyArchive: true
         }
 
