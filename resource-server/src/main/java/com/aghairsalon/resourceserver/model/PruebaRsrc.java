@@ -18,6 +18,7 @@ public class PruebaRsrc {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private int id;
     private String userKey;
+    @Column(name = "value_col") 
     private String value;
 
 }
