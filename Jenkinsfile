@@ -10,7 +10,7 @@ pipeline {
         // Maven local repo dentro del workspace (evita problemas de permisos/cache en CI)
         MAVEN_OPTS = "-Dmaven.repo.local=${WORKSPACE}/.m2/repository"
 
-        // Nombre del stack/compose (opcional, útil para logs)
+        // Nombre del stack/compose (útil para identificar servicios/ps/logs)
         COMPOSE_PROJECT_NAME = "oauth2-poc"
     }
 
@@ -38,14 +38,15 @@ pipeline {
                           mvn -B clean test package
                         fi
                     '''
+
+                    echo 'Verificando que se generó el JAR...'
+                    sh 'ls -lah target/*.jar'
                 }
             }
         }
 
         stage('Build Frontend (opcional)') {
-            when {
-                expression { fileExists('front/package.json') }
-            }
+            when { expression { fileExists('front/package.json') } }
             steps {
                 echo 'Build frontend Angular (opcional)'
                 dir('front') {
@@ -59,34 +60,27 @@ pipeline {
         }
 
         stage('Deploy (CD con Docker Compose)') {
-            // Desplegar solo en la rama develop (ajústalo a main si lo prefieres)
-            when {
-                anyOf {
-                    branch 'develop'
-                    // branch 'main'
-                }
-            }
+            // Desplegar solo en la rama develop (cámbialo a main si lo necesitas)
+            when { branch 'develop' }
+
             steps {
                 echo 'Despliegue automático REAL con Docker Compose'
 
-                // Validaciones rápidas para que el error sea claro si falta algo
                 sh '''
                     set -e
+
+                    # Validaciones básicas
                     test -f docker-compose.yml || (echo "ERROR: No existe docker-compose.yml en la raíz del repo" && exit 1)
                     test -f resource-server/Dockerfile || (echo "ERROR: No existe resource-server/Dockerfile" && exit 1)
+                    test -f resource-server/target/*.jar || (echo "ERROR: No existe JAR en resource-server/target. ¿Falló el build?" && exit 1)
 
                     echo "Docker version:"
                     docker version
 
-                    echo "Docker compose version:"
+                    echo "Docker Compose version:"
                     docker compose version
-                '''
 
-                // Levantar / actualizar servicios
-                sh '''
-                    set -e
-
-                    echo "Parando stack anterior (si existe)..."
+                    echo "Bajando stack anterior (si existe)..."
                     docker compose -p "${COMPOSE_PROJECT_NAME}" down || true
 
                     echo "Construyendo y levantando stack..."
@@ -122,3 +116,4 @@ pipeline {
         }
     }
 }
+
