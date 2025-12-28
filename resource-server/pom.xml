@@ -37,6 +37,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- ACTUATOR (health, info, metrics...) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
         <!-- JPA + MYSQL -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -47,6 +53,12 @@
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
+        </dependency>
+
+        <!-- H2 (para tests y también puedes usarlo en prod si quieres con profile prod) -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
         </dependency>
 
         <!-- LOMBOK -->
@@ -61,12 +73,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-        </dependency>
-
-        <!-- H2 database for tests -->
-        <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
         </dependency>
 
     </dependencies>
@@ -87,7 +93,6 @@
                 <version>${jacoco.version}</version>
 
                 <executions>
-                    <!-- Instrumentación antes de los tests -->
                     <execution>
                         <id>prepare-agent</id>
                         <goals>
@@ -95,7 +100,6 @@
                         </goals>
                     </execution>
 
-                    <!-- Generación de informe -->
                     <execution>
                         <id>report</id>
                         <phase>prepare-package</phase>
