@@ -19,9 +19,6 @@ spring:
     console:
       enabled: false
 
-# =========================
-# ACTUATOR
-# =========================
 management:
   endpoints:
     web:
@@ -31,11 +28,3 @@ management:
     health:
       show-details: always
 
-# =========================
-# SECURITY (Resource Server)
-# =========================
-spring.security:
-  oauth2:
-    resourceserver:
-      jwt:
-        issuer-uri: http://dummy-issuer-for-prod
