@@ -3,11 +3,15 @@ pipeline {
 
     options {
         timestamps()
+        disableConcurrentBuilds()
     }
 
     environment {
-        // Evita problemas típicos de Maven en CI
-        MAVEN_OPTS = "-Dmaven.repo.local=.m2/repository"
+        // Maven local repo dentro del workspace (evita problemas de permisos/cache en CI)
+        MAVEN_OPTS = "-Dmaven.repo.local=${WORKSPACE}/.m2/repository"
+
+        // Nombre del stack/compose (opcional, útil para logs)
+        COMPOSE_PROJECT_NAME = "oauth2-poc"
     }
 
     stages {
@@ -24,11 +28,8 @@ pipeline {
                 echo 'Build + tests del backend con Maven (resource-server)'
 
                 dir('resource-server') {
-
-                    // Asegura permisos del wrapper si existe
                     sh 'chmod +x mvnw || true'
 
-                    // Build real + tests (incluye generación de reportes)
                     sh '''
                         set -e
                         if [ -f "./mvnw" ]; then
@@ -41,14 +42,12 @@ pipeline {
             }
         }
 
-        // ---- OPCIONAL: FRONTEND (si existe carpeta y package.json) ----
         stage('Build Frontend (opcional)') {
             when {
                 expression { fileExists('front/package.json') }
             }
             steps {
                 echo 'Build frontend Angular (opcional)'
-
                 dir('front') {
                     sh '''
                         set -e
@@ -59,10 +58,43 @@ pipeline {
             }
         }
 
-        stage('Deploy (simulado)') {
+        stage('Deploy (CD con Docker Compose)') {
+            // Desplegar solo en la rama develop (ajústalo a main si lo prefieres)
+            when {
+                anyOf {
+                    branch 'develop'
+                    // branch 'main'
+                }
+            }
             steps {
-                echo 'Despliegue automático (simulado)'
-                sh 'echo "Aplicación desplegada correctamente (simulado)"'
+                echo 'Despliegue automático REAL con Docker Compose'
+
+                // Validaciones rápidas para que el error sea claro si falta algo
+                sh '''
+                    set -e
+                    test -f docker-compose.yml || (echo "ERROR: No existe docker-compose.yml en la raíz del repo" && exit 1)
+                    test -f resource-server/Dockerfile || (echo "ERROR: No existe resource-server/Dockerfile" && exit 1)
+
+                    echo "Docker version:"
+                    docker version
+
+                    echo "Docker compose version:"
+                    docker compose version
+                '''
+
+                // Levantar / actualizar servicios
+                sh '''
+                    set -e
+
+                    echo "Parando stack anterior (si existe)..."
+                    docker compose -p "${COMPOSE_PROJECT_NAME}" down || true
+
+                    echo "Construyendo y levantando stack..."
+                    docker compose -p "${COMPOSE_PROJECT_NAME}" up -d --build
+
+                    echo "Servicios levantados:"
+                    docker compose -p "${COMPOSE_PROJECT_NAME}" ps
+                '''
             }
         }
     }
@@ -71,13 +103,13 @@ pipeline {
         always {
             echo 'Pipeline finalizado'
 
-            // 1) Publicar resultados de tests JUnit (backend)
+            // Publicar resultados de tests JUnit
             junit allowEmptyResults: true, testResults: 'resource-server/target/surefire-reports/*.xml'
 
-            // 2) Guardar el .jar del backend si se generó
+            // Guardar el .jar del backend si se generó
             archiveArtifacts artifacts: 'resource-server/target/*.jar', allowEmptyArchive: true
 
-            // 3) Guardar reportes JaCoCo si existen (los genera tu pom con jacoco-maven-plugin)
+            // Guardar reportes JaCoCo si existen
             archiveArtifacts artifacts: 'resource-server/target/site/jacoco/**', allowEmptyArchive: true
         }
 
