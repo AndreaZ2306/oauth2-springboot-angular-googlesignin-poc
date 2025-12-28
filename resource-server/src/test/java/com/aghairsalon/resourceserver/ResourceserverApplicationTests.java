@@ -1,7 +1,9 @@
 package com.aghairsalon.resourceserver;
 
+import com.aghairsalon.resourceserver.config.TestSecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
@@ -10,6 +12,5 @@ import org.springframework.test.context.ActiveProfiles;
 class ResourceserverApplicationTests {
 
     @Test
-    void contextLoads() {
-    }
+    void contextLoads() {}
 }
