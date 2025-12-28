@@ -1,4 +1,10 @@
+server:
+  port: 8080
+
 spring:
+  profiles:
+    active: prod
+
   datasource:
     url: jdbc:h2:mem:proddb
     driver-class-name: org.h2.Driver
@@ -10,7 +16,31 @@ spring:
     hibernate:
       ddl-auto: update
     show-sql: false
+    open-in-view: false
 
   h2:
     console:
       enabled: false
+
+# =========================
+# ACTUATOR
+# =========================
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+# =========================
+# SECURITY (Resource Server)
+# =========================
+spring.security:
+  oauth2:
+    resourceserver:
+      jwt:
+        # placeholder para prod
+        # cuando tengas Auth Server real, esto se cambia
+        issuer-uri: http://dummy-issuer-for-prod
