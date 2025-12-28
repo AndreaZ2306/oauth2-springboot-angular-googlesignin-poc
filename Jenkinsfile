@@ -61,9 +61,20 @@ pipeline {
 
         stage('Deploy (CD con Docker Compose)') {
             // Desplegar solo en la rama develop (cámbialo a main si lo necesitas)
-            when { branch 'develop' }
+            when {
+              expression {
+                // Multibranch: BRANCH_NAME = develop
+                // Pipeline from SCM: GIT_BRANCH suele ser origin/develop o develop
+                return (env.BRANCH_NAME == 'develop') ||
+                       (env.GIT_BRANCH == 'origin/develop') ||
+                       (env.GIT_BRANCH == 'develop')
+              }
+            }
+
 
             steps {
+                echo "DEBUG BRANCH_NAME=${env.BRANCH_NAME}, GIT_BRANCH=${env.GIT_BRANCH}"
+                
                 echo 'Despliegue automático REAL con Docker Compose'
 
                 sh '''
